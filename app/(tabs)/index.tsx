@@ -12,7 +12,7 @@ export default function HomeScreen() {
           headerImage={
             <IconSymbol
               size={310}
-              color="#808080"
+              color="#F4F4F4"
               name="house.fill"
               style={styles.headerImage}
             />
@@ -29,9 +29,9 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   headerImage: {
-    color: '#808080',
+    color: '#FFFFFF',
     bottom: -90,
-    left: -35,
+    left: -30,
     position: 'absolute',
   },
   titleContainer: {

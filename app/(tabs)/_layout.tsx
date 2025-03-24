@@ -37,7 +37,7 @@ export default function TabLayout() {
         name="statistics"
         options={{
           title: 'Statistics',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.pie.fill" color={color} />,
         }}
       />
       <Tabs.Screen
