@@ -1,5 +1,7 @@
 import { StyleSheet, Image, Platform } from 'react-native';
 
+import { Collapsible } from '@/components/Collapsible';
+import { ExternalLink } from '@/components/ExternalLink';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -13,14 +15,14 @@ export default function TabTwoScreen() {
         <IconSymbol
           size={310}
           color="#808080"
-          name="gear"
+          name="chevron.left.forwardslash.chevron.right"
           style={styles.headerImage}
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Settings</ThemedText>
+        <ThemedText type="title">Statistics</ThemedText>
       </ThemedView>
-      <ThemedText>Adjust everything and anything about this app right here.</ThemedText>
+      <ThemedText>Here are all the stats for the time you have spent in your life.</ThemedText>
     </ParallaxScrollView>
   );
 }
