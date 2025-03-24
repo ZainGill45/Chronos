@@ -50,6 +50,10 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
         </ThemedText>
       </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Step 4: Build something awesome</ThemedText>
+        <ThemedText>If you perfer to build something lame then you can just get out because we only deal in greatness over here.</ThemedText>
+      </ThemedView>
     </ParallaxScrollView>
   );
 }
