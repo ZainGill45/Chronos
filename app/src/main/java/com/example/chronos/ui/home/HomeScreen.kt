@@ -95,10 +95,9 @@ fun HomeScreen(
 
     if (showAddDialog) {
         AddEntryDialog(
-            onDismiss = { showAddDialog = false },
+            onDismiss = { },
             onSave = { hourStartMillis, description ->
                 viewModel.addEntry(hourStartMillis, description)
-                showAddDialog = false
             }
         )
     }

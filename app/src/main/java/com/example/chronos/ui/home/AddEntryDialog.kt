@@ -112,9 +112,8 @@ fun AddEntryDialog(
             initialDate = selectedDate,
             onConfirm = {
                 selectedDate = it
-                showDatePicker = false
             },
-            onDismiss = { showDatePicker = false }
+            onDismiss = { }
         )
     }
 
@@ -123,9 +122,8 @@ fun AddEntryDialog(
             initialHour = selectedHour,
             onConfirm = {
                 selectedHour = it
-                showTimePicker = false
             },
-            onDismiss = { showTimePicker = false }
+            onDismiss = { }
         )
     }
 }
