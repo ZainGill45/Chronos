@@ -41,3 +41,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# IDE / editor / tooling
+.idea/
+.gradle/
+.claude/
