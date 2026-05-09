@@ -1,56 +1,77 @@
-# Welcome to your Expo app 👋
+# Chronos
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An hourly activity logger. Every hour during your wake window, Chronos prompts you with a notification — tap it and log, in up to three words, what you spent the last hour on. Over time you build an honest, low-effort picture of where your time actually goes.
 
-## Get started
+The whole point is **frequent prompts, tiny entries**. Accuracy comes from being asked every hour, not from writing detailed notes.
 
-1. Install dependencies
+## Status
 
-   ```bash
-   npm install
-   ```
+Early MVP. Android-first. Local-only — entries live in on-device SQLite, nothing is sent to a server.
 
-2. Start the app
+## Core loop
 
-   ```bash
-   npx expo start
-   ```
+- **Notification window** (configurable, default 08:00–23:00). On the hour, Chronos fires a local notification asking about the hour that just ended. The first prompt fires one hour after Start (e.g. Start 8 AM → first prompt 9 AM, asking about 8–9 AM); the last prompt fires at End.
+- **Log modal.** Tap the notification → modal opens with the relevant hour preloaded. Type up to three words → save.
+- **Today timeline.** Reverse-chronological list of hours you've logged for the selected day. Empty hours aren't rendered.
+- **Backfill.** A center "+" button on the Today tab opens the modal in pick mode (date + hour range) so missed hours can be filled in later.
+- **Day picker.** `‹` / `›` chevrons (and a date picker) on the Today tab let you jump to any past day.
 
-In the output, you'll find options to open the app in a
+## Tech
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- [Expo](https://expo.dev) (~55) with [Expo Router](https://docs.expo.dev/router/introduction/) for file-based routing
+- [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/) for hourly scheduled prompts (Android `DAILY` triggers, one per hour in the window)
+- [`expo-sqlite`](https://docs.expo.dev/versions/latest/sdk/sqlite/) for local entry + settings storage
+- React Native 0.83 / React 19
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Running it
 
-## Get a fresh project
-
-When you're ready, run:
+> [!IMPORTANT]
+> **Don't use Expo Go.** Expo Go strips `Notifications.scheduleNotificationAsync`, so the entire prompt loop will silently no-op. Use a development build.
 
 ```bash
-npm run reset-project
+npm install
+npx expo run:android         # builds & installs the dev client on a connected device/emulator
+# or, after the dev client is installed:
+npx expo start --dev-client
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+iOS / web builds compile but aren't actively verified — Android is the priority surface.
 
-### Other setup steps
+### Android permissions
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+On first launch, Chronos routes to a permissions screen and won't proceed until they're granted. There are three things to allow:
 
-## Learn more
+1. **Notifications** (`POST_NOTIFICATIONS`) — system prompt; Chronos requests it inline.
+2. **Alarms & reminders** (`SCHEDULE_EXACT_ALARM`, Android 12+) — opens a system page; toggle "Allow" for Chronos.
+3. **Ignore battery optimization** — opens the battery-optimization list; find Chronos and choose "Don't optimize."
 
-To learn more about developing your project with Expo, look at the following resources:
+Some manufacturers (Samsung, Xiaomi/Redmi, OnePlus, Oppo, Huawei) aggressively kill background scheduled alarms even with the system permission. The permissions screen has per-OEM tips inline. If hourly prompts ever stop firing in real use, that's the first thing to check — battery managers, not the code.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project layout
 
-## Join the community
+```
+src/
+  app/
+    _layout.tsx            root: init DB, request notifications, gate first-run
+    permissions.tsx        permissions screen (first-run + Settings entry)
+    log.tsx                log modal (single + batch/pick mode)
+    (tabs)/
+      _layout.tsx          tab nav (Today / Settings)
+      index.tsx            Today: day picker + timeline
+      settings.tsx         notification window, permissions link, diagnostics
+  components/               themed primitives, day timeline, hour row, app tabs
+  lib/
+    db.ts                  SQLite schema + queries (entries, settings kv)
+    notifications.ts       channel setup, permission helper, schedule loop
+    settings.ts            notify window + first-run flag
+    time.ts                hour/day math + formatters
+  constants/theme.ts       colors, spacing, fonts
+```
 
-Join our community of developers creating universal apps.
+## Scripts
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npm run android      # alias for `expo run:android`
+npm start            # `expo start`
+npm run lint         # `expo lint`
+```
