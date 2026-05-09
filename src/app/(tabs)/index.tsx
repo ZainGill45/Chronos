@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DayTimeline } from '@/components/day-timeline';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { Entry, getEntriesForDay } from '@/lib/db';
 import { addDays, DAY_MS, formatDayLabel, startOfDay } from '@/lib/time';
 
@@ -78,7 +78,7 @@ export default function TodayScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.timelineWrap, { paddingBottom: BottomTabInset + Spacing.three }]}>
+        <View style={styles.timelineWrap}>
           <DayTimeline entries={entries} onPressHour={handlePressHour} />
         </View>
 

@@ -18,7 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { deleteEntry, getEntry, upsertEntry } from '@/lib/db';
+import { type Entry, deleteEntry, getEntriesForDay, getEntry, upsertEntry } from '@/lib/db';
 import {
   DEFAULT_NOTIFY_END,
   DEFAULT_NOTIFY_START,
@@ -56,6 +56,7 @@ export default function LogScreen() {
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [hourPickerTarget, setHourPickerTarget] = useState<HourPickerTarget>(null);
+  const [dayEntries, setDayEntries] = useState<Entry[]>([]);
 
   const theme = useTheme();
   const [word, setWord] = useState('');
@@ -90,10 +91,36 @@ export default function LogScreen() {
     };
   }, [fixedHourStart, isPickMode]);
 
+  useEffect(() => {
+    if (!isPickMode) return;
+    let active = true;
+    getEntriesForDay(pickedDayStart).then((rows) => {
+      if (active) setDayEntries(rows);
+    });
+    return () => {
+      active = false;
+    };
+  }, [pickedDayStart, isPickMode]);
+
   const sanitized = word.trim().split(/\s+/)[0] ?? '';
-  const isFutureRange =
-    isPickMode && pickedDayStart + pickedEndHour * HOUR_MS > Date.now();
-  const canSave = loaded && !saving && sanitized.length > 0 && !isFutureRange;
+
+  const takenHours = useMemo(() => {
+    const set = new Set<number>();
+    for (const e of dayEntries) set.add(new Date(e.hourStart).getHours());
+    return set;
+  }, [dayEntries]);
+
+  const hoursToSaveCount = useMemo(() => {
+    if (!isPickMode) return 1;
+    let n = 0;
+    for (let h = pickedStartHour; h <= pickedEndHour; h++) {
+      if (!takenHours.has(h)) n++;
+    }
+    return n;
+  }, [isPickMode, pickedStartHour, pickedEndHour, takenHours]);
+
+  const canSave =
+    loaded && !saving && sanitized.length > 0 && (!isPickMode || hoursToSaveCount > 0);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -101,6 +128,7 @@ export default function LogScreen() {
     try {
       if (isPickMode) {
         for (let h = pickedStartHour; h <= pickedEndHour; h++) {
+          if (takenHours.has(h)) continue;
           await upsertEntry(pickedDayStart + h * HOUR_MS, sanitized);
         }
       } else {
@@ -151,12 +179,15 @@ export default function LogScreen() {
   const filteredHours = useMemo(
     () =>
       Array.from({ length: 24 }, (_, h) => h).filter(
-        (h) => h >= notifyWindow.startHour && h <= notifyWindow.endHour
+        (h) =>
+          h >= notifyWindow.startHour &&
+          h <= notifyWindow.endHour &&
+          pickedDayStart + h * HOUR_MS <= Date.now() &&
+          !takenHours.has(h)
       ),
-    [notifyWindow]
+    [notifyWindow, pickedDayStart, takenHours]
   );
 
-  const entryCount = pickedEndHour - pickedStartHour + 1;
   const showDelete = !isPickMode && loaded && hadExistingEntry;
 
   return (
@@ -208,7 +239,7 @@ export default function LogScreen() {
                   </Pressable>
                 </View>
                 <ThemedText type="small" themeColor="textSecondary">
-                  Will save {entryCount} {entryCount === 1 ? 'entry' : 'entries'}
+                  Will save {hoursToSaveCount} {hoursToSaveCount === 1 ? 'entry' : 'entries'}
                 </ThemedText>
               </>
             ) : (
@@ -235,9 +266,9 @@ export default function LogScreen() {
               />
             </ThemedView>
 
-            {isFutureRange && (
+            {isPickMode && hoursToSaveCount === 0 && (
               <ThemedText type="small" themeColor="textSecondary" style={styles.prompt}>
-                That hour hasn&apos;t happened yet.
+                Every hour in that range is already logged.
               </ThemedText>
             )}
           </View>
@@ -285,42 +316,56 @@ export default function LogScreen() {
 
         <Modal
           visible={hourPickerTarget !== null}
-          transparent
-          animationType="fade"
+          animationType="slide"
           onRequestClose={() => setHourPickerTarget(null)}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setHourPickerTarget(null)}>
-            <Pressable onPress={() => {}}>
-              <ThemedView type="backgroundElement" style={styles.modalSheet}>
-                <FlatList
-                  data={filteredHours}
-                  keyExtractor={(h) => String(h)}
-                  renderItem={({ item: h }) => {
-                    const ts = pickedDayStart + h * HOUR_MS;
-                    const disabled = ts > Date.now();
-                    const selected =
-                      hourPickerTarget === 'start' ? h === pickedStartHour : h === pickedEndHour;
-                    return (
-                      <Pressable
-                        disabled={disabled}
-                        onPress={() => handleHourSelect(h)}
-                        style={({ pressed }) => [
-                          styles.hourItem,
-                          selected && { backgroundColor: theme.backgroundSelected },
-                          pressed && !disabled && styles.pressed,
-                          disabled && styles.disabled,
-                        ]}>
-                        <ThemedText
-                          type="default"
-                          themeColor={disabled ? 'textSecondary' : 'text'}>
-                          {formatHourRange(ts)}
-                        </ThemedText>
-                      </Pressable>
-                    );
-                  }}
-                />
-              </ThemedView>
-            </Pressable>
-          </Pressable>
+          <ThemedView style={styles.fullModal}>
+            <SafeAreaView style={styles.fullModalSafe} edges={['top', 'bottom']}>
+              <View style={styles.modalHeader}>
+                <ThemedText type="subtitle" style={styles.modalTitle}>
+                  {hourPickerTarget === 'start' ? 'Start hour' : 'End hour'}
+                </ThemedText>
+                <Pressable
+                  onPress={() => setHourPickerTarget(null)}
+                  hitSlop={16}
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <ThemedText type="subtitle" themeColor="textSecondary">
+                    ✕
+                  </ThemedText>
+                </Pressable>
+              </View>
+              <FlatList
+                data={filteredHours}
+                keyExtractor={(h) => String(h)}
+                contentContainerStyle={styles.hourList}
+                renderItem={({ item: h }) => {
+                  const ts = pickedDayStart + h * HOUR_MS;
+                  const selected =
+                    hourPickerTarget === 'start' ? h === pickedStartHour : h === pickedEndHour;
+                  return (
+                    <Pressable
+                      onPress={() => handleHourSelect(h)}
+                      style={({ pressed }) => [
+                        styles.hourItem,
+                        selected && { backgroundColor: theme.backgroundSelected },
+                        pressed && styles.pressed,
+                      ]}>
+                      <ThemedText style={styles.hourText}>{formatHourRange(ts)}</ThemedText>
+                      {selected && <ThemedText style={styles.hourCheck}>✓</ThemedText>}
+                    </Pressable>
+                  );
+                }}
+                ItemSeparatorComponent={() => <View style={styles.hourSeparator} />}
+                ListEmptyComponent={
+                  <ThemedText
+                    type="default"
+                    themeColor="textSecondary"
+                    style={styles.hourEmpty}>
+                    No available hours.
+                  </ThemedText>
+                }
+              />
+            </SafeAreaView>
+          </ThemedView>
         </Modal>
       </SafeAreaView>
     </ThemedView>
@@ -393,22 +438,51 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.4,
   },
-  modalBackdrop: {
+  fullModal: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.four,
   },
-  modalSheet: {
-    width: '100%',
-    maxWidth: 360,
-    maxHeight: '70%',
-    borderRadius: Spacing.three,
-    paddingVertical: Spacing.two,
+  fullModalSafe: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
+  },
+  modalTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  hourList: {
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
   },
   hourItem: {
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Spacing.three,
+  },
+  hourText: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  hourCheck: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: '#3c87f7',
+  },
+  hourSeparator: {
+    height: 0,
+  },
+  hourEmpty: {
+    textAlign: 'center',
+    paddingVertical: Spacing.four,
   },
 });
