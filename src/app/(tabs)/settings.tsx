@@ -1,7 +1,7 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -36,14 +36,12 @@ export default function SettingsScreen() {
   const [startHour, setStartHour] = useState<number>(DEFAULT_NOTIFY_START);
   const [endHour, setEndHour] = useState<number>(DEFAULT_NOTIFY_END);
   const [picker, setPicker] = useState<PickerKind>(null);
-  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
   useEffect(() => {
     getNotifyWindow().then((w) => {
       setStartHour(w.startHour);
       setEndHour(w.endHour);
     });
-    Notifications.getPermissionsAsync().then((p) => setPermissionGranted(p.granted));
   }, []);
 
   const persist = useCallback(async (start: number, end: number) => {
@@ -64,23 +62,6 @@ export default function SettingsScreen() {
       const next = Math.max(hour, startHour);
       setEndHour(next);
       persist(startHour, next);
-    }
-  };
-
-  const handleRequestPermission = async () => {
-    const granted = await ensureNotificationPermission();
-    setPermissionGranted(granted);
-    if (granted) {
-      await rescheduleHourlyNotifications({ startHour, endHour });
-    } else {
-      Alert.alert(
-        'Notifications disabled',
-        'Open system settings to enable notifications for Chronos.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open settings', onPress: () => Linking.openSettings() },
-        ]
-      );
     }
   };
 
@@ -106,7 +87,9 @@ export default function SettingsScreen() {
 
           <Section title="Notification window">
             <ThemedText type="small" themeColor="textSecondary">
-              Chronos prompts you on the hour, every hour, between these times.
+              Chronos prompts at the top of every hour, asking about the hour that just ended.
+              The first prompt fires one hour after Start (e.g. Start 8 AM → first prompt at 9 AM,
+              asking about 8–9 AM). Last prompt fires at End.
             </ThemedText>
 
             <Row
@@ -123,23 +106,9 @@ export default function SettingsScreen() {
 
           <Section title="Permissions">
             <Row
-              label="Notifications"
-              value={
-                permissionGranted == null
-                  ? '...'
-                  : permissionGranted
-                    ? 'Granted'
-                    : 'Not granted'
-              }
-              onPress={handleRequestPermission}
+              label="Manage permissions"
+              onPress={() => router.push('/permissions')}
             />
-            {Platform.OS === 'android' && (
-              <ThemedText type="small" themeColor="textSecondary">
-                On some Android devices, aggressive battery managers can delay scheduled
-                notifications. If prompts are unreliable, allow Chronos to ignore battery
-                optimization in system settings.
-              </ThemedText>
-            )}
           </Section>
 
           <Section title="Diagnostics">

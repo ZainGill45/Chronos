@@ -102,7 +102,7 @@ export default function LogScreen() {
     };
   }, [pickedDayStart, isPickMode]);
 
-  const sanitized = word.trim().split(/\s+/)[0] ?? '';
+  const sanitized = word.trim().split(/\s+/).filter(Boolean).slice(0, 3).join(' ');
 
   const takenHours = useMemo(() => {
     const set = new Set<number>();
@@ -247,20 +247,20 @@ export default function LogScreen() {
             )}
 
             <ThemedText type="small" themeColor="textSecondary" style={styles.prompt}>
-              In one word, what did you spend that hour on?
+              In up to three words, what did you spend that hour on?
             </ThemedText>
 
             <ThemedView type="backgroundElement" style={styles.inputWrap}>
               <TextInput
                 value={word}
                 onChangeText={setWord}
-                placeholder="e.g. running"
+                placeholder="e.g. deep work coding"
                 placeholderTextColor={theme.textSecondary}
                 style={[styles.input, { color: theme.text }]}
                 autoFocus={!isPickMode}
                 autoCapitalize="none"
                 autoCorrect={false}
-                maxLength={24}
+                maxLength={48}
                 returnKeyType="done"
                 onSubmitEditing={handleSave}
               />

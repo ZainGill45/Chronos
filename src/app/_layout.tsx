@@ -12,6 +12,7 @@ import {
   isHourlyPromptResponse,
   rescheduleHourlyNotifications,
 } from '@/lib/notifications';
+import { getPermissionsAcknowledged } from '@/lib/settings';
 import { previousHourStart } from '@/lib/time';
 
 function openLogForPreviousHour() {
@@ -32,6 +33,11 @@ export default function RootLayout() {
       const granted = await ensureNotificationPermission();
       if (granted && mounted) {
         await rescheduleHourlyNotifications();
+      }
+      const acknowledged = await getPermissionsAcknowledged();
+      if (mounted && (!acknowledged || !granted)) {
+        router.replace({ pathname: '/permissions', params: { firstRun: '1' } });
+        return;
       }
       const last = await Notifications.getLastNotificationResponseAsync();
       if (mounted && isHourlyPromptResponse(last)) {
@@ -61,6 +67,14 @@ export default function RootLayout() {
           options={{
             presentation: 'modal',
             title: 'Log hour',
+          }}
+        />
+        <Stack.Screen
+          name="permissions"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            gestureEnabled: false,
           }}
         />
       </Stack>

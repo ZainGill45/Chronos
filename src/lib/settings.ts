@@ -2,6 +2,7 @@ import { getSetting, setSetting } from './db';
 
 const KEY_NOTIFY_START = 'notify_start_hour';
 const KEY_NOTIFY_END = 'notify_end_hour';
+const KEY_PERMS_ACKNOWLEDGED = 'permissions_acknowledged';
 
 export const DEFAULT_NOTIFY_START = 8;
 export const DEFAULT_NOTIFY_END = 23;
@@ -26,4 +27,12 @@ export async function getNotifyWindow(): Promise<NotifyWindow> {
 export async function setNotifyWindow(window: NotifyWindow): Promise<void> {
   await setSetting(KEY_NOTIFY_START, String(clampHour(window.startHour)));
   await setSetting(KEY_NOTIFY_END, String(clampHour(window.endHour)));
+}
+
+export async function getPermissionsAcknowledged(): Promise<boolean> {
+  return (await getSetting(KEY_PERMS_ACKNOWLEDGED)) === '1';
+}
+
+export async function setPermissionsAcknowledged(value: boolean): Promise<void> {
+  await setSetting(KEY_PERMS_ACKNOWLEDGED, value ? '1' : '0');
 }

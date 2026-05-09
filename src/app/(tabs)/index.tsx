@@ -69,10 +69,7 @@ export default function TodayScreen() {
             disabled={!canGoForward}
             hitSlop={12}
             style={({ pressed }) => pressed && styles.pressed}>
-            <ThemedText
-              type="subtitle"
-              themeColor={canGoForward ? 'text' : 'textSecondary'}
-              style={styles.chevron}>
+            <ThemedText type="subtitle" style={styles.chevron}>
               {'›'}
             </ThemedText>
           </Pressable>

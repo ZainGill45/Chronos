@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import { getNotifyWindow, NotifyWindow } from './settings';
 
@@ -34,18 +34,40 @@ export async function ensureNotificationPermission(): Promise<boolean> {
   return next.granted;
 }
 
+export async function openExactAlarmSettings(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM');
+  } catch {
+    await Linking.openSettings();
+  }
+}
+
+export async function openBatteryOptimizationSettings(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
+  } catch {
+    await Linking.openSettings();
+  }
+}
+
+export async function openAppNotificationSettings(): Promise<void> {
+  await Linking.openSettings();
+}
+
 export async function rescheduleHourlyNotifications(window?: NotifyWindow): Promise<void> {
   const w = window ?? (await getNotifyWindow());
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const { startHour, endHour } = w;
-  if (startHour > endHour) return;
+  if (startHour + 1 > endHour) return;
 
-  for (let h = startHour; h <= endHour; h++) {
+  for (let h = startHour + 1; h <= endHour; h++) {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Chronos',
-        body: 'What did you spend the last hour on? (one word)',
+        body: 'What did you spend the last hour on? (up to 3 words)',
         data: { kind: HOURLY_PROMPT_KIND },
       },
       trigger: {
